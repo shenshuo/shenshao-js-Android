@@ -6,5 +6,11 @@ WebViewJavascriptBridge是移动UIView和Html交互通信的桥梁，用作者�
 
 ![main.png](http://upload-images.jianshu.io/upload_images/2022038-1153245a6a0877c5.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
 
+1.使用腾讯定位 获取位置信息   
+2.获取手机联系人上传 
+3.动态设置系统状态栏字体颜色 为打造h5型应用完美样式兼容
+4.获取本地相册 拍照上传 回执base64编码图片(长字符java传给js需要json格式化后转string格式才可以)
+5.集成腾讯优图 拍照识别银行卡 身份证正反面 驾驶证
+6.动态跳转所有客户端activity
+ 后续功能有待完善和二次封装  本demo框架适合 初创公司（产品线长）各种项目快速上线 前端开发 页面 公众号app一起上线 手机客户信息
 
-API介绍：http://www.jianshu.com/p/52071a3d07b4
