@@ -27,11 +27,7 @@ import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.widget.Toast;
 
-import com.github.lzyzsd.jsbridge.BridgeHandler;
-import com.github.lzyzsd.jsbridge.BridgeWebView;
-import com.github.lzyzsd.jsbridge.BridgeWebViewClient;
-import com.github.lzyzsd.jsbridge.CallBackFunction;
-import com.github.lzyzsd.jsbridge.DefaultHandler;
+
 import com.google.gson.Gson;
 import com.lyk.jsbridge.entity.IdentifyResult;
 import com.lyk.jsbridge.facein.CameraActivity;
@@ -40,6 +36,10 @@ import com.lyk.jsbridge.modle.User;
 import com.lyk.jsbridge.photopick.ImageInfo;
 import com.lyk.jsbridge.photopick.PhotoPickActivity;
 import com.lyk.jsbridge.youtu.sign.BitMapUtils;
+import com.tamic.jswebview.browse.CallBackFunction;
+import com.tamic.jswebview.browse.JsWeb.CustomWebViewClient;
+import com.tamic.jswebview.browse.JsWeb.JsHandler;
+import com.tamic.jswebview.view.ProgressBarWebView;
 import com.tencent.map.geolocation.TencentLocation;
 import com.tencent.map.geolocation.TencentLocationListener;
 import com.tencent.map.geolocation.TencentLocationManager;
@@ -54,14 +54,16 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.lang.ref.WeakReference;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import me.nereo.multi_image_selector.MultiImageSelector;
 import me.nereo.multi_image_selector.MultiImageSelectorActivity;
 
 public class MainActivity extends BaseActivty implements TencentLocationListener {
 
-    private BridgeWebView mWebView;
+    private ProgressBarWebView mWebView;
     private final static int REQUEST_IDIMAGE = 100;
     private final static int REQUEST_DRIVEIMAGE = 200;
     private final static int REQUEST_BANKIMAGE = 300;
@@ -84,6 +86,7 @@ public class MainActivity extends BaseActivty implements TencentLocationListener
     private long TIME_DIFF = 2 * 1000;
     private String p = null;
     private TelephonyManager tm;
+    private ArrayList<String> mHandlers = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -99,11 +102,32 @@ public class MainActivity extends BaseActivty implements TencentLocationListener
 //                        .setAction("Action", null).show();
 //            }
 //        });
+        mHandlers.add("submitFromWeb");
+        mHandlers.add("functionOpen");
+        mHandlers.add("contact");
+        mHandlers.add("useragent");
+        mHandlers.add("deviceId");
+        mHandlers.add("mobileType");
+        mHandlers.add("statusBlack");
+        mHandlers.add("idCard");
+        mHandlers.add("bankCard");
+        mHandlers.add("driverCard");
+        mHandlers.add("photo");
+        mHandlers.add("face");
+        mHandlers.add("statusWhite");
+        mHandlers.add("youtu");
+        mHandlers.add("location");
+        mHandlers.add("settings");
+        mHandlers.add("share");
+        mHandlers.add("activity");
+        mHandlers.add("toast");
+        mHandlers.add("camera");
+
 
         mLocationManager = TencentLocationManager.getInstance(this);
         // 设置坐标系为 gcj-02, 缺省坐标为 gcj-02, 所以通常不必进行如下调用
         mLocationManager.setCoordinateType(TencentLocationManager.COORDINATE_TYPE_GCJ02);
-        mWebView = (BridgeWebView) findViewById(R.id.webView);
+        mWebView = (ProgressBarWebView) findViewById(R.id.webView);
         initWebView();
     }
 
@@ -127,11 +151,24 @@ public class MainActivity extends BaseActivty implements TencentLocationListener
 
     private void initWebView() {
         // 设置具体WebViewClient
-        mWebView.setWebViewClient(new MyWebViewClient(mWebView));
         // set HadlerCallBack
-        mWebView.setDefaultHandler(new myHadlerCallBack());
         // setWebChromeClient
-        mWebView.setWebChromeClient(new WebChromeClient() {
+        mWebView.setWebViewClient(new CustomWebViewClient(mWebView.getWebView()) {
+
+
+            @Override
+            public String onPageError(String url) {
+                //指定网络加载失败时的错误页面
+                return "file:///android_asset/error.html";
+            }
+
+            @Override
+            public Map<String, String> onPageHeaders(String url) {
+
+                // 可以加入header
+
+                return null;
+            }
 
             @SuppressWarnings("unused")
             public void openFileChooser(ValueCallback<Uri> uploadMsg, String AcceptType, String capture) {
@@ -149,15 +186,16 @@ public class MainActivity extends BaseActivty implements TencentLocationListener
             }
         });
 
-//        mWebView.loadUrl("file:///android_asset/demo.html");
+        mWebView.loadUrl("file:///android_asset/demo.html");
 //        mWebView.loadUrl("http://10.10.1.173:8077/");
-        mWebView.loadUrl("http://10.10.11.189:4217/");
+//        mWebView.loadUrl("http://10.10.1.220:4217/");
+//        mWebView.loadUrl("http://xinxiangche2099.rmbboxs.cn/");
 //        mWebView.loadUrl("http://wbs.rmbboxs.cn/#/chosen");
 //        String ua = mWebView.getSettings().getUserAgentString();
 //        mWebView.getSettings().setUserAgentString(ua + "; " + "xxc_android" );
         //必须和js函数名字一致，注册好具体执行回调函数，类似java实现类。
-        mWebView.getSettings().setDomStorageEnabled(true);
-        mWebView.getSettings().setAppCacheMaxSize(1024 * 1024 * 8);
+        mWebView.getWebView().getSettings().setDomStorageEnabled(true);
+        mWebView.getWebView().getSettings().setAppCacheMaxSize(1024 * 1024 * 8);
 //		WebView.setWebContentsDebuggingEnabled(true);
         // This next one is crazy. It's the DEFAULT location for your app's
         // cache
@@ -165,228 +203,167 @@ public class MainActivity extends BaseActivty implements TencentLocationListener
         // UPDATE: no hardcoded path. Thanks to Kevin Hawkins
         String appCachePath = getApplicationContext().getCacheDir().getAbsolutePath();
 
-        mWebView.getSettings().setAllowFileAccess(true);
-        mWebView.getSettings().setAppCacheEnabled(true);
-        mWebView.getSettings().setJavaScriptEnabled(true);
-        mWebView.getSettings().setAppCachePath(appCachePath);
-        mWebView.getSettings().setJavaScriptCanOpenWindowsAutomatically(true);
-        mWebView.registerHandler("submitFromWeb", new BridgeHandler() {
-
+        mWebView.getWebView().getSettings().setAllowFileAccess(true);
+        mWebView.getWebView().getSettings().setAppCacheEnabled(true);
+        mWebView.getWebView().getSettings().setJavaScriptEnabled(true);
+        mWebView.getWebView().getSettings().setAppCachePath(appCachePath);
+        mWebView.getWebView().getSettings().setJavaScriptCanOpenWindowsAutomatically(true);
+        mWebView.registerHandlers(mHandlers, new JsHandler() {
             @Override
-            public void handler(String data, CallBackFunction function) {
+            public void OnHandler(String handlerName, String responseData, com.tamic.jswebview.browse.CallBackFunction function) {
+                Intent intent=null;
+                switch (handlerName) {
+                    case "submitFromWeb":
 
-                String str = "这是html返回给java的数据:" + data;
-                // 例如你可以对原始数据进行处理
-                str = str + ",Java经过处理后截取了一部分：" + str.substring(0, 5);
-                Log.i(TAG, "handler = submitFromWeb, data from web = " + data);
-                Toast.makeText(MainActivity.this, str, Toast.LENGTH_SHORT).show();
-                //回调返回给Js
-                function.onCallBack(str + ",Java经过处理后截取了一部分：" + str.substring(0, 5));
-            }
+                        String str = "这是html返回给java的数据:" + responseData;
+                        // 例如你可以对原始数据进行处理
+                        str = str + ",Java经过处理后截取了一部分：" + str.substring(0, 5);
+                        Log.i(TAG, "handler = submitFromWeb, data from web = " + responseData);
+                        Toast.makeText(MainActivity.this, str, Toast.LENGTH_SHORT).show();
+                        //回调返回给Js
+                        function.onCallBack(str + ",Java经过处理后截取了一部分：" + str.substring(0, 5));
+                        break;
+                    case "functionOpen":
+                        Toast.makeText(MainActivity.this, "网页在打开你的下载文件预览", Toast.LENGTH_SHORT).show();
+                        pickFile();
 
-        });
+                        break;
+                    case "contact":
+                        contactFunction = function;
+                        requestContactPermission(Manifest.permission.READ_CONTACTS, function);
 
-        mWebView.registerHandler("functionOpen", new BridgeHandler() {
+                        break;
+                    case "useragent":
 
-            @Override
-            public void handler(String data, CallBackFunction function) {
-                Toast.makeText(MainActivity.this, "网页在打开你的下载文件预览", Toast.LENGTH_SHORT).show();
-                pickFile();
+                        function.onCallBack("xxc_android");
+                        break;
+                    case "deviceId":
+                        function.onCallBack(getdeviceId());
 
-            }
+                        break;
+                    case "mobileType":
+                        Build build = new Build();
 
-        });
-        mWebView.registerHandler("contact", new BridgeHandler() {
+                        function.onCallBack(build.MODEL);
 
-            @Override
-            public void handler(String data, CallBackFunction function) {
-                contactFunction = function;
-                requestContactPermission(Manifest.permission.READ_CONTACTS, function);
+                        break;
+                    case "statusBlack":
+                        StatusBarUtil.StatusBarLightMode(MainActivity.this);
 
-            }
+                        break;
+                    case "idCard":
+                        selectImage(REQUEST_IDIMAGE);
+                        nCurrentCartType = Integer.parseInt(responseData);
+                        idCardFunction = function;
 
-        });
-        mWebView.registerHandler("useragent", new BridgeHandler() {
+                        break;
+                    case "bankCard":
 
-            @Override
-            public void handler(String data, CallBackFunction function) {
-                function.onCallBack("xxc_android");
+                        selectImage(REQUEST_BANKIMAGE);
+                        nCurrentCartType = Integer.parseInt(responseData);
+                        bankCardFunction = function;
+                        break;
+                    case "driverCard":
+                        selectImage(REQUEST_DRIVEIMAGE);
+                        nCurrentCartType = Integer.parseInt(responseData);
+                        driveCardFunction = function;
 
-            }
+                        break;
+                    case "photo":
+                        selectImage(REQUEST_PHOTO);
+                        photoFunction = function;
 
-        });
+                        break;
+                    case "face":
+                         intent = new Intent(MainActivity.this, CameraActivity.class);
+                        intent.putExtra("name", "mine");
+                        intent.putExtra("validate_data", "0000");
+                        intent.putExtra("idCard", "");
+                        startActivity(intent);
 
-        mWebView.registerHandler("deviceId", new BridgeHandler() {
+                        break;
+                    case "statusWhite":
+                        int a = 0;
+                        if (Rom.check(Rom.ROM_MIUI)) {
+                            a = 1;
+                        } else if (Rom.check(Rom.ROM_FLYME)) {
+                            a = 2;
+                        } else {
+                            a = 3;
+                        }
+                        StatusBarUtil.StatusBarDarkMode(MainActivity.this, a);
 
-            @Override
-            public void handler(String data, CallBackFunction function) {
+                        break;
+                    case "youtu":
+                        intent = new Intent(MainActivity.this, com.lyk.jsbridge.youtuyundemo.MainActivity.class);
+                        startActivity(intent);
 
-                function.onCallBack(getdeviceId());
+                        break;
+                    case "location":
 
-            }
+                        locationFunction = function;
+                        startLocation(function);
+                        break;
+                    case "settings":
 
-        });
-        mWebView.registerHandler("mobileType", new BridgeHandler() {
+                        startActivity(new Intent(Settings.ACTION_SETTINGS));
+                        break;
+                    case "share":
 
-            @Override
-            public void handler(String data, CallBackFunction function) {
-                Build build = new Build();
 
-                function.onCallBack(build.MODEL);
+                        break;
+                    case "activity":
+                        try {
+                            startActivity(new Intent(MainActivity.this, Class.forName(responseData)));
+                        } catch (ClassNotFoundException e) {
+                            e.printStackTrace();
+                        }
 
-            }
+                        break;
+                    case "toast":
+                        Toast.makeText(MainActivity.this, responseData, Toast.LENGTH_SHORT).show();
 
-        });
-        mWebView.registerHandler("statusBlack", new BridgeHandler() {
-            @Override
-            public void handler(String data, CallBackFunction function) {
-                StatusBarUtil.StatusBarLightMode(MainActivity.this);
-            }
-        });
-        mWebView.registerHandler("idCard", new BridgeHandler() {
-            @Override
-            public void handler(String data, CallBackFunction function) {
-                selectImage(REQUEST_IDIMAGE);
-                nCurrentCartType = Integer.parseInt(data);
-                idCardFunction = function;
-            }
-        });
-        mWebView.registerHandler("bankCard", new BridgeHandler() {
-            @Override
-            public void handler(String data, CallBackFunction function) {
-                selectImage(REQUEST_BANKIMAGE);
-                nCurrentCartType = Integer.parseInt(data);
-                bankCardFunction = function;
-            }
-        });
-        mWebView.registerHandler("driverCard", new BridgeHandler() {
-            @Override
-            public void handler(String data, CallBackFunction function) {
-                selectImage(REQUEST_DRIVEIMAGE);
-                nCurrentCartType = Integer.parseInt(data);
-                driveCardFunction = function;
-            }
-        });
-        mWebView.registerHandler("photo", new BridgeHandler() {
-            @Override
-            public void handler(String data, CallBackFunction function) {
-                selectImage(REQUEST_PHOTO);
-                photoFunction = function;
-            }
-        });
+                        break;
+                    case "camera":
+                        cameraFunction = function;
+                        if (Build.VERSION.SDK_INT >= 24) {  // 或者 android.os.Build.VERSION_CODES.KITKAT这个常量的值是19
 
-        mWebView.registerHandler("face", new BridgeHandler() {
-            @Override
-            public void handler(String data, CallBackFunction function) {
-                Intent intent = new Intent(MainActivity.this, CameraActivity.class);
-                intent.putExtra("name", "沈硕");
-                intent.putExtra("validate_data", "0000");
-                intent.putExtra("idCard", "");
-                startActivity(intent);
-            }
-        });
-        mWebView.registerHandler("statusWhite", new BridgeHandler() {
-            @Override
-            public void handler(String data, CallBackFunction function) {
-                int a = 0;
-                if (Rom.check(Rom.ROM_MIUI)) {
-                    a = 1;
-                } else if (Rom.check(Rom.ROM_FLYME)) {
-                    a = 2;
-                } else {
-                    a = 3;
-                }
-                StatusBarUtil.StatusBarDarkMode(MainActivity.this, a);
-            }
-        });
-        mWebView.registerHandler("youtu", new BridgeHandler() {
-            @Override
-            public void handler(String data, CallBackFunction function) {
-                Intent intent = new Intent(MainActivity.this, com.lyk.jsbridge.youtuyundemo.MainActivity.class);
-                startActivity(intent);
-            }
-        });
-        mWebView.registerHandler("location", new BridgeHandler() {
-            @Override
-            public void handler(String data, CallBackFunction function) {
-                locationFunction = function;
-                startLocation(function);
-            }
-        });
-        mWebView.registerHandler("settings", new BridgeHandler() {
-            @Override
-            public void handler(String data, CallBackFunction function) {
-                startActivity(new Intent(Settings.ACTION_SETTINGS));
-            }
-        });
-        mWebView.registerHandler("share", new BridgeHandler() {
-            @Override
-            public void handler(String data, CallBackFunction function) {
-                startActivity(new Intent(Settings.ACTION_SETTINGS));
-            }
-        });
-        mWebView.registerHandler("activity", new BridgeHandler() {
-            @Override
-            public void handler(String data, CallBackFunction function) {
-                try {
-                    startActivity(new Intent(MainActivity.this, Class.forName(data)));
-                } catch (ClassNotFoundException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
-        //模拟用户信息 获取本地位置，用户名返回给html
-        User user = new User();
-        user.setLocation("上海");
-        user.setName("Bruce");
-        // 回调 "functionInJs"
-        mWebView.callHandler("toast", new Gson().toJson(user), new CallBackFunction() {
-            @Override
-            public void onCallBack(String data) {
-
-                Toast.makeText(MainActivity.this, data, Toast.LENGTH_SHORT).show();
-
-            }
-        });
-        mWebView.send("hello");
-        mWebView.registerHandler("camera", new BridgeHandler() {
-            @Override
-            public void handler(String data, CallBackFunction function) {
-                cameraFunction = function;
-                if (Build.VERSION.SDK_INT >= 24) {  // 或者 android.os.Build.VERSION_CODES.KITKAT这个常量的值是19
-
-                    onPermissionRequests(Manifest.permission.CAMERA, new OnBooleanListener() {
-                        @Override
-                        public void onClick(boolean bln) {
-                            if (bln) {
-                                Log.d("MainActivity", "进入权限");
-                                Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-                                File photoFile = createImagePathFile(MainActivity.this);
-                                intent.setAction(MediaStore.ACTION_IMAGE_CAPTURE);
+                            onPermissionRequests(Manifest.permission.CAMERA, new OnBooleanListener() {
+                                @Override
+                                public void onClick(boolean bln) {
+                                    if (bln) {
+                                        Log.d("MainActivity", "进入权限");
+                                        Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                                        File photoFile = createImagePathFile(MainActivity.this);
+                                        intent.setAction(MediaStore.ACTION_IMAGE_CAPTURE);
 
                                 /*
                                 * 这里就是高版本需要注意的，需用使用FileProvider来获取Uri，同时需要注意getUriForFile
                                 * 方法第二个参数要与AndroidManifest.xml中provider的里面的属性authorities的值一致
                                 * */
-                                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                                imageUriFromCamera = FileProvider.getUriForFile(MainActivity.this, "com.lyk.jsbridge.fileprovider", photoFile);
-                                intent.putExtra(MediaStore.EXTRA_OUTPUT, imageUriFromCamera);
+                                        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                                        imageUriFromCamera = FileProvider.getUriForFile(MainActivity.this, "com.lyk.jsbridge.fileprovider", photoFile);
+                                        intent.putExtra(MediaStore.EXTRA_OUTPUT, imageUriFromCamera);
 
-                                startActivityForResult(intent, GET_IMAGE_BY_CAMERA_U);
-                            } else {
-                                Toast.makeText(MainActivity.this, "扫码拍照或无法正常使用", Toast.LENGTH_SHORT).show();
-                            }
+                                        startActivityForResult(intent, GET_IMAGE_BY_CAMERA_U);
+                                    } else {
+                                        Toast.makeText(MainActivity.this, "扫码拍照或无法正常使用", Toast.LENGTH_SHORT).show();
+                                    }
+                                }
+                            });
+
+                        } else {
+                            imageUriFromCamera = createImagePathUri(MainActivity.this);
+                             intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                            intent.putExtra(MediaStore.EXTRA_OUTPUT, imageUriFromCamera);
+                            startActivityForResult(intent, GET_IMAGE_BY_CAMERA_U);
                         }
-                    });
 
-                } else {
-                    imageUriFromCamera = createImagePathUri(MainActivity.this);
-                    Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-                    intent.putExtra(MediaStore.EXTRA_OUTPUT, imageUriFromCamera);
-                    startActivityForResult(intent, GET_IMAGE_BY_CAMERA_U);
+                        break;
                 }
             }
         });
+
     }
 
     public void stopLocation() {
@@ -923,34 +900,40 @@ public class MainActivity extends BaseActivty implements TencentLocationListener
     /**
      * 自定义的WebViewClient
      */
-    class MyWebViewClient extends BridgeWebViewClient {
-
-        public MyWebViewClient(BridgeWebView webView) {
-            super(webView);
-        }
-    }
-
-
-    /**
-     * 自定义回调
-     */
-    class myHadlerCallBack extends DefaultHandler {
-
-        @Override
-        public void handler(String data, CallBackFunction function) {
-            if (function != null) {
-
-                Toast.makeText(MainActivity.this, data, Toast.LENGTH_SHORT).show();
-                function.onCallBack("沈少");
-            }
-        }
-    }
+//    class MyWebViewClient extends BridgeWebViewClient {
+//
+//        public MyWebViewClient(BridgeWebView webView) {
+//            super(webView);
+//        }
+//    }
+//
+//
+//    /**
+//     * 自定义回调
+//     */
+//    class myHadlerCallBack extends DefaultHandler {
+//
+//        @Override
+//        public void handler(String data, CallBackFunction function) {
+//            if (function != null) {
+//
+//                Toast.makeText(MainActivity.this, data, Toast.LENGTH_SHORT).show();
+//                function.onCallBack("沈少");
+//            }
+//        }
+//    }
 
     public void pickFile() {
         Intent chooserIntent = new Intent(Intent.ACTION_GET_CONTENT);
         chooserIntent.setType("image/*");
         startActivityForResult(chooserIntent, RESULT_CODE);
     }
-
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        if (mWebView.getWebView() != null) {
+            mWebView.getWebView().destroy();
+        }
+    }
 
 }
