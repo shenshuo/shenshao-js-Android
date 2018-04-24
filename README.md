@@ -5,7 +5,7 @@ WebViewJavascriptBridge是移动UIView和Html交互通信的桥梁，用作者�
 
 
 ![main.png](http://upload-images.jianshu.io/upload_images/2022038-1153245a6a0877c5.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
-https://github.com/shenshuo/JsBridge_Android/master/Screenshots/1.png
+https://github.com/shenshuo/shenshao-js-Android/blob/master/%7FJsBridge_Android/Screenshots/1.png
 
 1.使用腾讯定位 获取位置信息   
 2.获取手机联系人上传 
